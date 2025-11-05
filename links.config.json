@@ -1,0 +1,42 @@
+{
+  "name": "Developer Homepage",
+  "links": [
+    {
+      "title": "GitHub",
+      "url": "https://github.com",
+      "description": "Code repository and version control",
+      "icon": "github"
+    },
+    {
+      "title": "Vercel",
+      "url": "https://vercel.com",
+      "description": "Deploy and host your applications",
+      "icon": "vercel"
+    },
+    {
+      "title": "AWS Console",
+      "url": "https://console.aws.amazon.com",
+      "description": "AWS cloud services dashboard",
+      "icon": "aws"
+    },
+    {
+      "title": "Netlify",
+      "url": "https://app.netlify.com",
+      "description": "Web deployment platform",
+      "icon": "netlify"
+    },
+    {
+      "title": "DigitalOcean",
+      "url": "https://cloud.digitalocean.com",
+      "description": "Cloud hosting and infrastructure",
+      "icon": "digitalocean"
+    },
+    {
+      "title": "Railway",
+      "url": "https://railway.app",
+      "description": "Deploy with ease",
+      "icon": "railway"
+    }
+  ]
+}
+

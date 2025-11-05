@@ -1,0 +1,95 @@
+# Default values for homepage
+replicaCount: 1
+
+image:
+  repository: your-registry/homepage
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Kubernetes RBAC
+rbac:
+  create: true
+
+# Quick Links Configuration
+links:
+  name: "Developer Homepage"
+  items:
+    - title: "GitHub"
+      url: "https://github.com"
+      description: "Code repository and version control"
+      icon: "github"
+    - title: "Vercel"
+      url: "https://vercel.com"
+      description: "Deploy and host your applications"
+      icon: "vercel"
+    - title: "AWS Console"
+      url: "https://console.aws.amazon.com"
+      description: "AWS cloud services dashboard"
+      icon: "aws"
+    - title: "Netlify"
+      url: "https://app.netlify.com"
+      description: "Web deployment platform"
+      icon: "netlify"
+    - title: "DigitalOcean"
+      url: "https://cloud.digitalocean.com"
+      description: "Cloud hosting and infrastructure"
+      icon: "digitalocean"
+    - title: "Railway"
+      url: "https://railway.app"
+      description: "Deploy with ease"
+      icon: "railway"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: homepage.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Kubernetes Ingress discovery settings
+k8s:
+  enabled: true  # Set to false if you don't need K8s ingress discovery
+

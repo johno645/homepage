@@ -1,0 +1,16 @@
+apiVersion: v2
+name: homepage
+description: A Helm chart for Developer Homepage with Kubernetes Ingress discovery
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - homepage
+  - dashboard
+  - developer
+  - links
+  - kubernetes
+maintainers:
+  - name: Your Name
+home: https://github.com/yourusername/homepage
+
