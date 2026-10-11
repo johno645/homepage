@@ -1,0 +1,16 @@
+apiVersion: v2
+name: homepage
+description: A Helm chart for Developer Homepage with Kubernetes Ingress discovery
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - homepage
+  - dashboard
+  - developer
+  - links
+  - kubernetes
+maintainers:
+  - name: johno645
+home: https://github.com/johno645/homepage
+

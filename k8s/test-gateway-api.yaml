@@ -1,0 +1,107 @@
+---
+# Gateway API Resources for Testing
+# Note: These require Gateway API CRDs to be installed
+
+# GatewayClass (required by Gateway API)
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: example-gateway-class
+spec:
+  controllerName: traefik.io/gateway-controller
+
+---
+# Gateway (defines how traffic is accepted)
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: example-gateway
+  namespace: default
+spec:
+  gatewayClassName: example-gateway-class
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+    - name: https
+      protocol: HTTPS
+      port: 443
+
+---
+# HTTPRoute 1: web application with multiple paths
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: web-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames:
+    - web.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: nonexistent
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: nonexistent
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /dashboard
+      backendRefs:
+        - name: nonexistent
+          port: 80
+
+---
+# HTTPRoute 2: API service
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: api-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames:
+    - api.example.com
+    - api-v2.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: nonexistent
+          port: 80
+
+---
+# HTTPRoute 3: dashboard
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: dashboard-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames:
+    - dashboard.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: nonexistent
+          port: 80
+

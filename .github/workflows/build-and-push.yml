@@ -1,0 +1,68 @@
+name: Build and Push to ECR
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['v*']
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: homepage
+
+jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: homepage-image
+      - name: Install Podman
+        run: |
+          if ! command -v podman >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y podman
+          fi
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Publish validated image
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          IMAGE="${REGISTRY}/${ECR_REPOSITORY}"
+          TAG="${RELEASE_TAG:-$REF_NAME}"
+          TAG="$(printf '%s' "$TAG" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_.-]/-/g')"
+          aws ecr get-login-password --region "$AWS_REGION" | podman login --username AWS --password-stdin "$REGISTRY"
+          trap 'podman logout "$REGISTRY"' EXIT
+          podman load --input homepage-image.tar
+          podman tag homepage:ci "$IMAGE:sha-$GITHUB_SHA" "$IMAGE:$TAG"
+          podman push "$IMAGE:sha-$GITHUB_SHA"
+          podman push "$IMAGE:$TAG"
+          if [[ "$REF_TYPE" == "tag" || -n "$RELEASE_TAG" ]]; then
+            podman tag homepage:ci "$IMAGE:prod"
+            podman push "$IMAGE:prod"
+          fi

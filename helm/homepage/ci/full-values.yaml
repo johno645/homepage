@@ -1,0 +1,35 @@
+replicaCount: 2
+k8s:
+  namespaces: [apps, infra]
+  health:
+    enabled: true
+  metrics:
+    enabled: true
+httpRoute:
+  enabled: true
+  hostnames: [dashboard.example.com]
+  parentRefs:
+    - name: edge
+      namespace: infra
+      sectionName: https
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+podDisruptionBudget:
+  enabled: true
+networkPolicy:
+  enabled: true
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: infra
+auth:
+  enabled: true
+  issuerUrl: https://identity.example.com
+  redirectUrl: https://dashboard.example.com/oauth2/callback
+  existingSecret: dashboard-oidc
+  emailDomains: [example.com]
+  trustedProxyCIDRs: [10.0.0.0/24]
+  groupNamespaces:
+    developers: [apps]

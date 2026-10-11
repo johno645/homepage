@@ -1,0 +1,54 @@
+{{- if and .Values.rbac.create .Values.k8s.enabled }}
+{{- $root := . }}
+{{- $scopes := .Values.k8s.namespaces }}
+{{- if not $scopes }}{{- $scopes = list "" }}{{- end }}
+{{- range $namespace := $scopes }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: {{ if $namespace }}Role{{ else }}ClusterRole{{ end }}
+metadata:
+  name: {{ include "homepage.fullname" $root }}-reader
+  {{- if $namespace }}
+  namespace: {{ $namespace }}
+  {{- end }}
+rules:
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["list", "get"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes", "tlsroutes", "gateways", "backendtlspolicies"]
+    verbs: ["list", "get"]
+  {{- if $root.Values.k8s.health.enabled }}
+  - apiGroups: [""]
+    resources: ["services", "pods", "events"]
+    verbs: ["list", "get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["list", "get"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["list", "get"]
+  {{- if $root.Values.k8s.metrics.enabled }}
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["list", "get"]
+  {{- end }}
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: {{ if $namespace }}RoleBinding{{ else }}ClusterRoleBinding{{ end }}
+metadata:
+  name: {{ include "homepage.fullname" $root }}-reader
+  {{- if $namespace }}
+  namespace: {{ $namespace }}
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: {{ if $namespace }}Role{{ else }}ClusterRole{{ end }}
+  name: {{ include "homepage.fullname" $root }}-reader
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "homepage.serviceAccountName" $root }}
+    namespace: {{ $root.Release.Namespace }}
+{{- end }}
+{{- end }}

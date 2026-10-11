@@ -1,0 +1,173 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "homepage.fullname" . }}
+  labels:
+    {{- include "homepage.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "homepage.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "homepage.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "homepage.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: {{ if .Values.auth.enabled }}app-http{{ else }}http{{ end }}
+              containerPort: 3000
+              protocol: TCP
+          env:
+            {{- if .Values.auth.enabled }}
+            - name: HOSTNAME
+              value: "127.0.0.1"
+            {{- end }}
+            - name: HOMEPAGE_AUTH_PROXY
+              value: {{ .Values.auth.enabled | quote }}
+            - name: HOMEPAGE_GROUP_NAMESPACES
+              value: {{ .Values.auth.groupNamespaces | toJson | quote }}
+            - name: NODE_ENV
+              value: "production"
+            - name: HOMEPAGE_LINKS
+              value: {{ .Values.links | toJson | quote }}
+            - name: HOMEPAGE_K8S_ENABLED
+              value: {{ .Values.k8s.enabled | quote }}
+            - name: HOMEPAGE_CLUSTER_NAME
+              value: {{ .Values.k8s.clusterName | quote }}
+            - name: HOMEPAGE_ENVIRONMENT
+              value: {{ .Values.k8s.environment | quote }}
+            - name: HOMEPAGE_NAMESPACES
+              value: {{ join "," .Values.k8s.namespaces | quote }}
+            - name: HOMEPAGE_LABEL_SELECTOR
+              value: {{ .Values.k8s.labelSelector | quote }}
+            - name: HOMEPAGE_REFRESH_SECONDS
+              value: {{ .Values.k8s.refreshSeconds | quote }}
+            - name: HOMEPAGE_CACHE_SECONDS
+              value: {{ .Values.k8s.cacheSeconds | quote }}
+            - name: HOMEPAGE_TIMEOUT_SECONDS
+              value: {{ .Values.k8s.timeoutSeconds | quote }}
+            - name: HOMEPAGE_HEALTH_ENABLED
+              value: {{ .Values.k8s.health.enabled | quote }}
+            - name: HOMEPAGE_METRICS_ENABLED
+              value: {{ .Values.k8s.metrics.enabled | quote }}
+            - name: HOMEPAGE_TOOL_TEMPLATES
+              value: {{ .Values.toolTemplates | toJson | quote }}
+          livenessProbe:
+            {{- if .Values.auth.enabled }}
+            exec:
+              command:
+                - /nodejs/bin/node
+                - -e
+                - "fetch('http://127.0.0.1:3000/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+            {{- else }}
+            httpGet:
+              path: /api/health/live
+              port: 3000
+            {{- end }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            {{- if .Values.auth.enabled }}
+            exec:
+              command:
+                - /nodejs/bin/node
+                - -e
+                - "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+            {{- else }}
+            httpGet:
+              path: /api/health/ready
+              port: 3000
+            {{- end }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.auth.enabled }}
+        - name: oauth2-proxy
+          image: {{ .Values.auth.image | quote }}
+          args:
+            - --provider=oidc
+            - --oidc-issuer-url={{ required "auth.issuerUrl is required" .Values.auth.issuerUrl }}
+            - --redirect-url={{ required "auth.redirectUrl is required" .Values.auth.redirectUrl }}
+            - --http-address=0.0.0.0:4180
+            - --upstream=http://127.0.0.1:3000
+            - --reverse-proxy=true
+            - --pass-user-headers=true
+            - --pass-basic-auth=false
+            {{- range .Values.auth.trustedProxyCIDRs }}
+            - {{ printf "--trusted-proxy-ip=%s" . | quote }}
+            {{- end }}
+            - --cookie-secure=true
+            - --code-challenge-method=S256
+            {{- range .Values.auth.emailDomains }}
+            - {{ printf "--email-domain=%s" . | quote }}
+            {{- end }}
+            {{- range .Values.auth.allowedGroups }}
+            - {{ printf "--allowed-group=%s" . | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 4180
+          env:
+            {{- range $key, $secretKey := dict "OAUTH2_PROXY_CLIENT_ID" "client-id" "OAUTH2_PROXY_CLIENT_SECRET" "client-secret" "OAUTH2_PROXY_COOKIE_SECRET" "cookie-secret" }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "auth.existingSecret is required" $.Values.auth.existingSecret }}
+                  key: {{ $secretKey }}
+            {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 4180
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 4180
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+

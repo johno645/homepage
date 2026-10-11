@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+      - name: Install Podman
+        run: |
+          if ! command -v podman >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y podman
+          fi
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:integration
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: npm run lint
+      - run: npm run build
+      - run: podman build --file Containerfile --tag homepage:ci .
+      - run: helm lint ./helm/homepage
+      - run: helm template homepage ./helm/homepage --namespace homepage > /dev/null
+      - run: helm template homepage ./helm/homepage --namespace homepage -f helm/homepage/ci/full-values.yaml > /dev/null
+      - run: podman save --format docker-archive --output homepage-image.tar homepage:ci
+      - name: Scan production image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          input: homepage-image.tar
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: homepage-image
+          path: homepage-image.tar
+          retention-days: 1

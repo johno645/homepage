@@ -1,0 +1,144 @@
+# Default values for homepage
+replicaCount: 1
+
+image:
+  repository: your-registry/homepage
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Kubernetes RBAC
+rbac:
+  create: true
+
+# Quick Links Configuration
+links:
+  name: "Developer Homepage"
+  links:
+    - title: "GitHub"
+      url: "https://github.com"
+      description: "Code repository and version control"
+      icon: "github"
+    - title: "Vercel"
+      url: "https://vercel.com"
+      description: "Deploy and host your applications"
+      icon: "vercel"
+    - title: "AWS Console"
+      url: "https://console.aws.amazon.com"
+      description: "AWS cloud services dashboard"
+      icon: "aws"
+    - title: "Netlify"
+      url: "https://app.netlify.com"
+      description: "Web deployment platform"
+      icon: "netlify"
+    - title: "DigitalOcean"
+      url: "https://cloud.digitalocean.com"
+      description: "Cloud hosting and infrastructure"
+      icon: "digitalocean"
+    - title: "Railway"
+      url: "https://railway.app"
+      description: "Deploy with ease"
+      icon: "railway"
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: homepage.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Kubernetes Ingress discovery settings
+k8s:
+  enabled: true
+  clusterName: "Kubernetes"
+  environment: ""
+  # Empty means cluster-wide. Include Gateway and cross-namespace backend namespaces.
+  namespaces: []
+  labelSelector: ""
+  refreshSeconds: 30
+  cacheSeconds: 15
+  timeoutSeconds: 10
+  health:
+    enabled: false
+  metrics:
+    enabled: false
+
+# Placeholders: {name}, {namespace}, {cluster}, {environment}; values are URL encoded.
+toolTemplates: {}
+
+httpRoute:
+  enabled: false
+  hostnames: []
+  parentRefs: []
+
+networkPolicy:
+  enabled: false
+  # NetworkPolicy peers allowed to reach the dashboard (e.g. your ingress controller).
+  ingressFrom: []
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Optional OIDC proxy: browser and API traffic enters through the proxy Service port.
+# Create this Secret separately: client-id, client-secret, cookie-secret (32 byte base64).
+auth:
+  enabled: false
+  image: "quay.io/oauth2-proxy/oauth2-proxy:v7.15.5"
+  issuerUrl: ""
+  redirectUrl: ""
+  existingSecret: ""
+  emailDomains: []
+  allowedGroups: []
+  trustedProxyCIDRs: []
+  # Optional group -> namespaces mapping. Unmapped users receive HTTP 403.
+  groupNamespaces: {}
+

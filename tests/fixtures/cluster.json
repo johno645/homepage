@@ -1,0 +1,21 @@
+{
+  "Ingress": [{
+    "apiVersion": "networking.k8s.io/v1", "kind": "Ingress",
+    "metadata": {"name": "orders", "namespace": "apps", "labels": {"dashboard": "true"}, "annotations": {
+      "homepage.dev/title": "Orders API", "homepage.dev/team": "Commerce", "homepage.dev/environment": "development", "homepage.dev/tags": "internal, critical",
+      "homepage.dev/repository": "https://github.com/example/orders", "nginx.ingress.kubernetes.io/backend-protocol": "HTTPS"
+    }},
+    "spec": {"ingressClassName": "nginx", "tls": [{"hosts": ["orders.example.com"]}], "rules": [{"host": "orders.example.com", "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "orders", "port": {"number": 443}}}}]}}]}
+  }],
+  "Gateway": [{"apiVersion": "gateway.networking.k8s.io/v1", "kind": "Gateway", "metadata": {"name": "edge", "namespace": "infra"}, "spec": {"listeners": [{"name": "https", "protocol": "HTTPS", "port": 443, "hostname": "*.example.com", "tls": {"mode": "Terminate"}}, {"name": "tls", "protocol": "TLS", "port": 8443, "tls": {"mode": "Passthrough"}}]}}],
+  "HTTPRoute": [{"apiVersion": "gateway.networking.k8s.io/v1", "kind": "HTTPRoute", "metadata": {"name": "docs", "namespace": "apps", "labels": {"dashboard": "true"}}, "spec": {"parentRefs": [{"name": "edge", "namespace": "infra", "sectionName": "https"}], "hostnames": ["docs.example.com"], "rules": [{"backendRefs": [{"name": "orders", "port": 443}]}]}, "status": {"parents": [{"parentRef": {"name": "edge", "namespace": "infra", "sectionName": "https"}, "conditions": [{"type": "Accepted", "status": "True"}, {"type": "ResolvedRefs", "status": "True"}]}]}}],
+  "TLSRoute": [{"apiVersion": "gateway.networking.k8s.io/v1alpha2", "kind": "TLSRoute", "metadata": {"name": "database", "namespace": "apps", "labels": {"dashboard": "true"}}, "spec": {"parentRefs": [{"name": "edge", "namespace": "infra", "sectionName": "tls"}], "hostnames": ["database.example.com"], "rules": [{"backendRefs": [{"name": "database", "port": 5432}]}]}}],
+  "BackendTLSPolicy": [{"apiVersion": "gateway.networking.k8s.io/v1", "kind": "BackendTLSPolicy", "metadata": {"name": "orders", "namespace": "apps"}, "spec": {"targetRefs": [{"kind": "Service", "name": "orders"}], "validation": {"hostname": "orders.example.com", "wellKnownCACertificates": "System"}}}],
+  "Service": [{"apiVersion": "v1", "kind": "Service", "metadata": {"name": "orders", "namespace": "apps"}, "spec": {"selector": {"app": "orders"}, "ports": [{"name": "https", "port": 443}]}}],
+  "Pod": [{"apiVersion": "v1", "kind": "Pod", "metadata": {"name": "orders-123", "namespace": "apps", "labels": {"app": "orders"}, "ownerReferences": [{"kind": "ReplicaSet", "name": "orders-123"}]}, "spec": {"containers": [{"name": "orders", "image": "orders:v2"}]}, "status": {"phase": "Running", "conditions": [{"type": "Ready", "status": "True"}], "containerStatuses": [{"name": "orders", "restartCount": 1}]}}],
+  "EndpointSlice": [{"apiVersion": "discovery.k8s.io/v1", "kind": "EndpointSlice", "metadata": {"name": "orders", "namespace": "apps", "labels": {"kubernetes.io/service-name": "orders"}}, "endpoints": [{"conditions": {"ready": true}, "targetRef": {"kind": "Pod", "name": "orders-123"}}]}],
+  "Deployment": [{"apiVersion": "apps/v1", "kind": "Deployment", "metadata": {"name": "orders", "namespace": "apps"}, "spec": {"replicas": 1}, "status": {"readyReplicas": 1, "updatedReplicas": 1}}],
+  "ReplicaSet": [{"apiVersion": "apps/v1", "kind": "ReplicaSet", "metadata": {"name": "orders-123", "namespace": "apps", "ownerReferences": [{"kind": "Deployment", "name": "orders"}]}}],
+  "StatefulSet": [], "DaemonSet": [], "Event": [],
+  "PodMetrics": [{"apiVersion": "metrics.k8s.io/v1beta1", "kind": "PodMetrics", "metadata": {"name": "orders-123", "namespace": "apps"}, "containers": [{"name": "orders", "usage": {"cpu": "120m", "memory": "128Mi"}}]}]
+}

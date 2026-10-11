@@ -1,0 +1,386 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "k8s": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "clusterName",
+        "environment",
+        "namespaces",
+        "labelSelector",
+        "refreshSeconds",
+        "cacheSeconds",
+        "timeoutSeconds",
+        "health",
+        "metrics"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "clusterName": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "namespaces": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 63
+          },
+          "uniqueItems": true
+        },
+        "labelSelector": {
+          "type": "string"
+        },
+        "refreshSeconds": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 3600
+        },
+        "cacheSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "health": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enabled"
+          ]
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enabled"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "metrics": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "health": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "toolTemplates": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^https?://"
+      }
+    },
+    "httpRoute": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "hostnames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "parentRefs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "namespace": {
+                "type": "string"
+              },
+              "sectionName": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "parentRefs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "image": {
+          "type": "string"
+        },
+        "issuerUrl": {
+          "type": "string"
+        },
+        "redirectUrl": {
+          "type": "string"
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "emailDomains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "allowedGroups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "trustedProxyCIDRs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "groupNamespaces": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+            },
+            "uniqueItems": true
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issuerUrl": {
+                "pattern": "^https://",
+                "minLength": 9
+              },
+              "redirectUrl": {
+                "pattern": "^https://.*[/]oauth2/callback$"
+              },
+              "existingSecret": {
+                "minLength": 1
+              },
+              "emailDomains": {
+                "minItems": 1
+              },
+              "trustedProxyCIDRs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "ingressFrom": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "ingressFrom": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "autoscaling": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "minReplicas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "maxReplicas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "targetCPUUtilizationPercentage": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "minAvailable": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+%$"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "auth": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "networkPolicy": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "auth": {
+            "properties": {
+              "groupNamespaces": {
+                "minProperties": 1
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "auth": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
